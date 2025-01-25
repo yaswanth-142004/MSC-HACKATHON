@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import FileUpload from './FileUpload';
-import axios from 'axios';
 
-// Define types for the uploads state
 type UploadType = {
   text: string;
   preview: string;
@@ -22,26 +20,35 @@ function App() {
   });
   const [result, setResult] = useState<string | null>(null);
   const [isEvaluating, setIsEvaluating] = useState<boolean>(false);
+  const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
 
-  const handleUpload = (text: string, type: keyof UploadsState) => {
+  const handleUpload = (data: { text?: string, preview?: string }, type: keyof UploadsState) => {
     setUploads(prev => ({
       ...prev,
-      [type]: { ...prev[type], text } // Preserve the `preview` property
+      [type]: {
+        ...prev[type],
+        ...(data.text && { text: data.text }),
+        ...(data.preview && { preview: data.preview })
+      }
     }));
+  };
+
+  const handleSubmit = () => {
+    setIsSubmitted(true);
   };
 
   const handleEvaluate = async () => {
     setIsEvaluating(true);
     try {
-      const response = await axios.post<{ result: string }>(
-        `${process.env.REACT_APP_API_URL}/evaluate`,
-        {
-          question: uploads.question.text,
-          correct_answer: uploads.correctAnswer.text,
-          student_answer: uploads.studentAnswer.text
-        }
-      );
-      setResult(response.data.result);
+      const mockResponse = await new Promise<{ result: string }>(resolve => {
+        setTimeout(() => {
+          resolve({
+            result: 'Evaluation complete. Student answer shows good understanding of the topic.'
+          });
+        }, 2000);
+      });
+      
+      setResult(mockResponse.result);
     } catch (error) {
       console.error('Evaluation Error:', error);
       setResult('Error evaluating answer. Please try again.');
@@ -67,22 +74,30 @@ function App() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <FileUpload 
             label="Question Paper" 
-            onUpload={handleUpload} 
-            type="question"
+            onUpload={(data) => handleUpload(data, 'question')} 
           />
           <FileUpload 
             label="Correct Answer" 
-            onUpload={handleUpload} 
-            type="correctAnswer"
+            onUpload={(data) => handleUpload(data, 'correctAnswer')} 
           />
           <FileUpload 
             label="Student Answer" 
-            onUpload={handleUpload} 
-            type="studentAnswer"
+            onUpload={(data) => handleUpload(data, 'studentAnswer')} 
           />
         </div>
 
-        {allUploadsComplete && (
+        {allUploadsComplete && !isSubmitted && (
+          <div className="text-center mb-8">
+            <button 
+              onClick={handleSubmit}
+              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors duration-200"
+            >
+              Submit Uploads
+            </button>
+          </div>
+        )}
+
+        {isSubmitted && (
           <div className="text-center mb-8">
             <button 
               onClick={handleEvaluate}
@@ -110,6 +125,17 @@ function App() {
             </div>
           </div>
         )}
+
+        <div className="text-center mt-8">
+          <a 
+            href="https://u66wzghpxc89jeji.vercel.app/" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 transition-colors duration-200"
+          >
+            Analytics
+          </a>
+        </div>
       </div>
     </div>
   );

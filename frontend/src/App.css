@@ -1,23 +1,22 @@
 @import "tailwindcss";
 
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center;
+  width: 100%;
+  min-height: 100vh;
 }
 
 .logo {
-  height: 6em;
-  padding: 1.5em;
+  @apply h-24 p-6 transition-all duration-300 ease-in-out;
   will-change: filter;
-  transition: filter 300ms;
 }
+
 .logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+  @apply drop-shadow-[0_0_2em_rgba(100,108,255,0.67)];
 }
+
 .logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+  @apply drop-shadow-[0_0_2em_rgba(97,218,251,0.67)];
 }
 
 @keyframes logo-spin {
@@ -36,9 +35,28 @@
 }
 
 .card {
-  padding: 2em;
+  @apply p-8 bg-white shadow-md rounded-lg;
 }
 
 .read-the-docs {
-  color: #888;
+  @apply text-gray-500;
+}
+
+/* Responsive adjustments */
+@screen sm {
+  .logo {
+    @apply h-32 p-8;
+  }
+}
+
+@screen md {
+  .logo {
+    @apply h-40 p-10;
+  }
+}
+
+@screen lg {
+  .logo {
+    @apply h-48 p-12;
+  }
 }
