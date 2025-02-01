@@ -1,53 +1,66 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+import streamlit as st
 from ocr import initialize_client, perform_ocr
-from agent import call
-import tempfile
-import os
-import logging
+from agent import call  # Importing the call function from agent
 
-logging.basicConfig(level=logging.DEBUG)
+def main():
+    st.title("Automated Answer Evaluation with OCR and Agents")
+    st.write("Upload images of the question paper, correct answers, and the student's answer for evaluation.")
 
-app = FastAPI()
+    # File uploaders
+    st.subheader("Upload Question Paper")
+    question_paper_file = st.file_uploader("Question paper image:", type=["jpg", "jpeg", "png"], key="qp")
 
-# CORS Configuration
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+    st.subheader("Upload Correct Answer Paper")
+    correct_answer_file = st.file_uploader("Correct answer image:", type=["jpg", "jpeg", "png"], key="ca")
 
-@app.post("/ocr")
-async def process_ocr(file: UploadFile = File(...)):
-    try:
-        logging.debug(f"Received file: {file.filename}")
-        client = initialize_client()
-        
-        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-            content = await file.read()
-            temp_file.write(content)
-            temp_file_path = temp_file.name
-        
-        with open(temp_file_path, "rb") as f:
-            image_content = f.read()
-            text = perform_ocr(client, image_content)
-        
-        os.unlink(temp_file_path)
-        logging.debug(f"OCR Result: {text}")
-        return {"text": text}
-    except Exception as e:
-        logging.error(f"OCR Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    st.subheader("Upload Student's Answer")
+    student_answer_file = st.file_uploader("Student answer image:", type=["jpg", "jpeg", "png"], key="sa")
 
-@app.post("/evaluate")
-async def evaluate_answer(data: dict):
-    try:
-        response = call(
-            data["question"], 
-            data["correct_answer"], 
-            data["student_answer"]
-        )
-        return {"result": response}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    if all([question_paper_file, correct_answer_file, student_answer_file]):
+        try:
+            # Display uploaded images
+            cols = st.columns(3)
+            with cols[0]: st.image(question_paper_file, caption="Question Paper")
+            with cols[1]: st.image(correct_answer_file, caption="Correct Answer")
+            with cols[2]: st.image(student_answer_file, caption="Student Answer")
+
+            # Initialize OCR client
+            client = initialize_client()
+
+            # Perform OCR with progress
+            with st.status("Processing documents...", expanded=True) as status:
+                st.write("Extracting text from question paper...")
+                question_text = perform_ocr(client, question_paper_file.read())
+                
+                st.write("Extracting text from correct answer...")
+                correct_answer_text = perform_ocr(client, correct_answer_file.read())
+                
+                st.write("Extracting text from student answer...")
+                student_answer_text = perform_ocr(client, student_answer_file.read())
+                status.update(label="OCR Complete!", state="complete")
+
+            # Show extracted text in expanders
+            with st.expander("View Extracted Text"):
+                tabs = st.tabs(["Question", "Correct Answer", "Student Answer"])
+                with tabs[0]: st.code(question_text)
+                with tabs[1]: st.code(correct_answer_text)
+                with tabs[2]: st.code(student_answer_text)
+
+            if st.button("Evaluate Answer", type="primary"):
+                # Call the agent's evaluation function
+                with st.spinner("Evaluating answer..."):
+                    response = call(question_text, correct_answer_text, student_answer_text)
+
+                # Display results
+                st.subheader("Evaluation Results")
+                st.markdown(f"**Marks and Feedback:**")
+                st.success(response)
+
+        except Exception as e:
+            st.error(f"Processing failed: {str(e)}")
+            st.exception(e)
+    else:
+        st.warning("Please upload all required documents to continue")
+
+if __name__ == "__main__":
+    main()

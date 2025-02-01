@@ -5,7 +5,7 @@ def initialize_client():
     Initializes and returns the Google Vision API client.
     """
     try:
-        client = vision.ImageAnnotatorClient.from_service_account_file('./key.json')
+        client = vision.ImageAnnotatorClient.from_service_account_file('./key1.json')
         return client
     except Exception as e:
         raise RuntimeError(f"Failed to initialize Google Vision API client: {e}")
